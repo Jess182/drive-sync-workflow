@@ -1,0 +1,41 @@
+name: Sync drive changes
+
+permissions:
+  contents: write
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+
+env:
+  CLIENT_ID: ${{ secrets.CLIENT_ID }}
+  CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+  REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
+  FOLDER_ID: ${{ vars.FOLDER_ID }}
+  OUTPUT_DIR: ${{ vars.OUTPUT_DIR }}
+
+jobs:
+  job-sync-changes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up OS
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: vx.x.x
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Get changes
+        run: deno run --allow-read --allow-write --allow-env --allow-net ./scripts/drive-sync.ts
+
+      - name: Commit changes
+        run: |
+          if [[ -n $(git status -s) ]]
+          then
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add .
+            git commit -m "Sync last drive changes"
+            git push origin main
+          fi
